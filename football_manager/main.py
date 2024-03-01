@@ -5,7 +5,7 @@ from typing import List, Optional
 import uuid
 
 users = {}
-TOKEN = "7135618299:AAHUFIAjzLCRjtw0j2RbJ9ltlSzqajx7pM0"
+TOKEN = ""
 subscribers = {}
 game = {}
 
@@ -148,7 +148,7 @@ class NodimSession(BaseModel):
 
   async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
       """Sends a message with three inline buttons attached."""
-      self.manager.add_player()
+      self.manager.add_player(update.effective_chat.id, update.effective_chat.first_name)
       keyboard = [
           [
               InlineKeyboardButton("Subscribe", callback_data="subscribe"),
