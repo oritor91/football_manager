@@ -1,0 +1,7 @@
+name: football-manager
+dependencies:
+  - python=3.11
+  - pydantic
+  - httpx
+  - twilio
+  - flask
