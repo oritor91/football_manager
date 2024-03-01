@@ -1,13 +1,12 @@
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import Application, CallbackQueryHandler, CommandHandler, ContextTypes
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List
 import uuid
 
-users = {}
-TOKEN = ""
-subscribers = {}
-game = {}
+
+TOKEN = "7135618299:AAHUFIAjzLCRjtw0j2RbJ9ltlSzqajx7pM0"
+
 
 handlers_keys = {
   "/rg": "הירשם כמנוי",
@@ -17,7 +16,7 @@ handlers_keys = {
 }
 
 class Player(BaseModel):
-    t_id: str | None = None
+    t_id: int | None = None
     t_name: str | None = None
     nickname: str | None = None
 
@@ -85,22 +84,25 @@ class NodimSession(BaseModel):
       manager=manager
     )
   
-  def get_player(self, update: Update) -> Player:
-      player_id = update.effective_message.id
-      if self.manager.players is None:
-        return
-      next(
+  def get_entity(self, entity_id: int, iterable):
+      return next(
             (
-                player
-                for player in self.manager.players
-                if player.t_id == player_id
+                entity
+                for entity in iterable
+                if entity.t_id == entity_id
             ),
             None
         )
   
+  def get_player(self, update: Update) -> Player:
+      player_id = update.effective_user.id
+      if self.manager.players is None:
+        return
+      return self.get_entity(player_id, self.manager.players)
+  
   def get_subscriber(self, update: Update) -> Subscriber:
-      id = update.effective_message.id
-      return next(filter(self.manager.subscribers, lambda x: x.t_id==id), None)
+      sub_id = update.effective_user.id
+      return self.get_entity(sub_id, self.manager.subscribers)
 
   async def subscribe(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
       player = self.get_player(update)
@@ -108,10 +110,9 @@ class NodimSession(BaseModel):
         self.manager.add_subscriber(player, "מנוי")
 
   async def add_user_to_game_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-      global game
       user_id = update.effective_chat.id
       if user_id in self.manager.next_game:
-        await update.message.reply_text(f"{game[update.effective_chat.id]} נרשמת כבר נסיך")
+        await update.message.reply_text(f"{update.effective_chat.id} נרשמת כבר נסיך")
       else:
         sub = self.get_subscriber(update)
         if self.manager.next_game.signup(sub):
@@ -120,10 +121,9 @@ class NodimSession(BaseModel):
           await update.message.reply_text(f'{update.effective_user.first_name} המשחק כבר מלא או שכבר נרשמת אליו')
 
   async def game_users(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-      global game
       msg = ""
-      for key, value in game.items():
-        msg += f"user {key} -> {value} יגיע למשחק הקרוב\n"
+      for player in self.manager.next_game.players:
+        msg += f"user {player.t_name} יגיע למשחק הקרוב\n"
       await update.message.reply_text(msg)
 
 
@@ -148,7 +148,7 @@ class NodimSession(BaseModel):
 
   async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
       """Sends a message with three inline buttons attached."""
-      self.manager.add_player(update.effective_chat.id, update.effective_chat.first_name)
+      self.manager.add_player(update.effective_user.id, update.effective_user.first_name)
       keyboard = [
           [
               InlineKeyboardButton("Subscribe", callback_data="subscribe"),
